@@ -1,0 +1,2204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Manager (BDT)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js for the charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Libraries for PDF and Excel generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .gradient-bg {
+            background-image: linear-gradient(to right, #4ade80, #34d399, #10b981);
+        }
+
+        .gradient-card {
+            background-image: linear-gradient(to bottom, #d1fae5, #ecfdf5);
+        }
+
+        .modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* Custom scrollbar for better aesthetics */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #e5e7eb;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        
+        .relative-dropdown {
+            position: relative;
+        }
+        .absolute-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center p-4 min-h-screen text-gray-800">
+
+    <!-- Branch Selection Modal -->
+    <div id="branch-modal" class="modal fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50 z-50">
+        <div class="bg-white p-8 rounded-3xl shadow-xl max-w-sm w-full text-center">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">Select or Create a Branch</h3>
+            <div id="branch-list-container" class="mb-4 max-h-60 overflow-y-auto custom-scrollbar">
+                <ul id="branch-list" class="space-y-2"></ul>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="new-branch-name" placeholder="Enter new branch name" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <button id="create-branch-btn" class="w-full py-3 px-4 rounded-xl text-white font-bold text-lg shadow-lg bg-green-500 hover:bg-green-600 transition-colors">
+                Create New Branch
+            </button>
+        </div>
+    </div>
+
+
+    <!-- Main App Container - Enhanced with a soft gradient and shadow -->
+    <div class="gradient-card p-8 rounded-3xl shadow-2xl flex-col w-full max-w-7xl mx-auto space-y-6 hidden" id="main-app">
+
+        <!-- Top Navigation & Weather - Cleaned up with better spacing -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-4 space-y-4 md:space-y-0 md:space-x-4">
+            <!-- Weather Display -->
+            <div id="weather-display" class="flex items-center space-x-2 text-gray-700 bg-gray-100 p-2 rounded-xl shadow-inner">
+                <span class="animate-pulse">Loading weather...</span>
+            </div>
+            <!-- Navigation Buttons with Icons -->
+            <div class="flex flex-col md:flex-row justify-center md:justify-end space-y-2 md:space-y-0 md:space-x-2">
+                <button id="manager-btn" class="py-2 px-4 rounded-xl text-white font-bold bg-green-500 hover:bg-green-600 transition-colors shadow-md flex items-center justify-center space-x-2">
+                    <i class="ph-bold ph-table text-lg"></i>
+                    <span>Manager</span>
+                </button>
+                <button id="dashboard-btn" class="py-2 px-4 rounded-xl text-white font-bold bg-blue-500 hover:bg-blue-600 transition-colors shadow-md flex items-center justify-center space-x-2">
+                    <i class="ph-bold ph-chart-pie text-lg"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button id="history-btn" class="py-2 px-4 rounded-xl text-white font-bold bg-yellow-500 hover:bg-yellow-600 transition-colors shadow-md flex items-center justify-center space-x-2">
+                    <i class="ph-bold ph-receipt text-lg"></i>
+                    <span>History</span>
+                </button>
+                <button id="staff-btn" class="py-2 px-4 rounded-xl text-white font-bold bg-red-500 hover:bg-red-600 transition-colors shadow-md flex items-center justify-center space-x-2">
+                    <i class="ph-bold ph-users text-lg"></i>
+                    <span>Staff</span>
+                </button>
+                 <div class="relative-dropdown">
+                    <button id="more-options-btn" class="py-2 px-4 rounded-xl text-white font-bold bg-indigo-500 hover:bg-indigo-600 transition-colors shadow-md flex items-center justify-center space-x-2">
+                        <i class="ph-bold ph-dots-three-outline-vertical text-lg"></i>
+                        <span>More</span>
+                    </button>
+                    <div id="more-options-dropdown" class="absolute-dropdown mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden">
+                        <button id="edit-menu-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+                            <i class="ph ph-file-text text-lg"></i>
+                            <span>Edit Menu</span>
+                        </button>
+                        <button id="expenses-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+                            <i class="ph ph-currency-taka text-lg"></i>
+                            <span>Expenses</span>
+                        </button>
+                        <div class="border-t border-gray-200 my-1"></div>
+                        <button id="export-pdf-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+                            <i class="ph ph-file-pdf text-lg"></i>
+                            <span>Export to PDF</span>
+                        </button>
+                        <button id="export-excel-btn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+                            <i class="ph ph-file-xls text-lg"></i>
+                            <span>Export to Excel</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Restaurant Manager View -->
+        <div id="manager-view" class="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-6">
+            <!-- Left Panel: Menu & Add-ons -->
+            <div class="md:w-1/2 flex flex-col space-y-6">
+                <!-- Menu Section -->
+                <div class="bg-gray-50 p-6 rounded-2xl shadow-inner flex flex-col flex-grow">
+                    <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Menu</h1>
+                    <div id="menu-items" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 custom-scrollbar overflow-y-auto">
+                        <!-- Menu items will be rendered here by JavaScript -->
+                    </div>
+                </div>
+                <!-- Add-on Section -->
+                <div class="bg-gray-50 p-6 rounded-2xl shadow-inner flex flex-col flex-grow">
+                    <h2 class="text-2xl font-bold mb-4 text-center text-gray-800">Add-ons</h2>
+                    <div id="add-on-items" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 custom-scrollbar overflow-y-auto">
+                        <!-- Add-on items will be rendered here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Order & Tables -->
+            <div class="md:w-1/2 bg-gray-50 p-6 rounded-2xl shadow-inner flex flex-col h-full">
+                <h2 class="text-2xl font-semibold text-center mb-4 text-gray-800">Tables & Orders</h2>
+
+                <!-- Add New Table Button -->
+                <div class="flex justify-center mb-4">
+                    <button id="add-table-btn" class="py-2 px-4 rounded-xl text-sm text-white font-bold bg-blue-500 hover:bg-blue-600 transition-colors transform hover:scale-105 shadow-md flex items-center justify-center space-x-2">
+                        <i class="ph-bold ph-plus-circle text-lg"></i>
+                        <span>Add New Table</span>
+                    </button>
+                </div>
+
+                <!-- Table selector -->
+                <div id="table-selector" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+                    <!-- Table buttons will be rendered here by JavaScript -->
+                </div>
+
+                <!-- Order Details -->
+                <div class="bg-white p-4 rounded-xl shadow-md flex-grow flex flex-col border border-gray-200">
+                    <div class="flex-grow custom-scrollbar overflow-y-auto pr-2">
+                        <h3 id="order-title" class="text-xl font-bold mb-2 text-center text-gray-700">Select a Table</h3>
+                        <ul id="order-list" class="space-y-2">
+                            <!-- Order items will be rendered here by JavaScript -->
+                        </ul>
+                    </div>
+
+                    <!-- Total and Payment -->
+                    <div id="order-summary" class="mt-4 pt-4 border-t-2 border-dashed border-gray-300">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-lg font-semibold text-gray-700">Subtotal:</span>
+                            <span id="subtotal" class="text-lg font-bold text-gray-900">৳0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-lg font-semibold text-gray-700">Discount:</span>
+                            <span id="discount-display" class="text-lg font-bold text-gray-900">৳0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-lg font-semibold text-gray-700">Tax (8%):</span>
+                            <span id="tax" class="text-lg font-bold text-gray-900">৳0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center text-2xl font-bold mb-4">
+                            <span class="gradient-text font-extrabold text-transparent bg-clip-text gradient-bg">Total:</span>
+                            <span id="total" class="text-2xl font-extrabold gradient-text text-transparent bg-clip-text gradient-bg">৳0.00</span>
+                        </div>
+                        <button id="pay-button" class="w-full py-3 px-4 rounded-xl text-white font-bold text-lg shadow-lg gradient-bg transform hover:scale-105 transition-transform duration-300">
+                            Process Payment
+                        </button>
+                        <p class="text-xs text-center text-gray-400 mt-2">Authenticated User ID: <span id="userIdDisplay" class="font-mono text-gray-500">...</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="bg-gray-50 p-6 rounded-2xl shadow-inner flex-col items-center justify-center space-y-6 hidden">
+            <h1 class="text-3xl font-bold text-center text-gray-800">Restaurant Performance Dashboard</h1>
+             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl mx-auto mb-6">
+                <!-- Total Revenue Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-md text-center">
+                    <p class="text-xl font-semibold text-gray-600 mb-2">Total Revenue</p>
+                    <p id="total-revenue-display" class="text-4xl font-extrabold text-green-500">৳0.00</p>
+                </div>
+                <!-- Total Expenses Card -->
+                 <div class="bg-white p-6 rounded-2xl shadow-md text-center">
+                    <p class="text-xl font-semibold text-gray-600 mb-2">Total Expenses</p>
+                    <p id="total-expenses-display" class="text-4xl font-extrabold text-red-500">৳0.00</p>
+                </div>
+                <!-- Staff Working Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-md text-center">
+                    <p class="text-xl font-semibold text-gray-600 mb-2">Staff Working</p>
+                    <p id="staff-working-display" class="text-4xl font-extrabold text-blue-500">0</p>
+                </div>
+                 <!-- Total Staff Hours Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-md text-center">
+                    <p class="text-xl font-semibold text-gray-600 mb-2">Total Staff Hours</p>
+                    <p id="total-hours-display" class="text-4xl font-extrabold text-red-500">0h</p>
+                </div>
+                <!-- Total Monthly Salary Card -->
+                 <div class="bg-white p-6 rounded-2xl shadow-md text-center">
+                    <p class="text-xl font-semibold text-gray-600 mb-2">Total Monthly Salary</p>
+                    <p id="total-salary-display" class="text-4xl font-extrabold text-indigo-500">৳0</p>
+                </div>
+                <!-- Total Bonuses Paid Card -->
+                 <div class="bg-white p-6 rounded-2xl shadow-md text-center">
+                    <p class="text-xl font-semibold text-gray-600 mb-2">Total Bonuses Paid</p>
+                    <p id="total-bonuses-display" class="text-4xl font-extrabold text-yellow-500">৳0</p>
+                </div>
+                <!-- Tables Chart Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-md flex items-center justify-center col-span-1 md:col-span-2 lg:col-span-3">
+                    <canvas id="tables-chart"></canvas>
+                </div>
+                
+                <div class="bg-white p-6 rounded-2xl shadow-md flex items-center justify-center col-span-1 md:col-span-2 lg:col-span-3">
+                    <canvas id="branch-revenue-chart"></canvas>
+                </div>
+                 <div class="bg-white p-6 rounded-2xl shadow-md flex items-center justify-center col-span-1 md:col-span-2 lg:col-span-3">
+                    <canvas id="daily-revenue-chart"></canvas>
+                </div>
+                 <div class="bg-white p-6 rounded-2xl shadow-md flex items-center justify-center col-span-1 md:col-span-2 lg:col-span-3">
+                    <canvas id="best-selling-chart"></canvas>
+                </div>
+            </div>
+            <div class="text-center text-gray-600">
+                <p>This pie chart shows the current status of all tables in the restaurant.</p>
+                <p><span class="font-bold text-green-500">Paid:</span> Tables with processed payments.</p>
+                <p><span class="font-bold text-yellow-500">Open:</span> Tables with an active order.</p>
+                <p><span class="font-bold text-gray-500">Empty:</span> Tables that are currently available.</p>
+            </div>
+        </div>
+        
+        <!-- Payment History View -->
+        <div id="history-view" class="bg-gray-50 p-6 rounded-2xl shadow-inner hidden flex-col space-y-4">
+            <h1 class="text-3xl font-bold mb-4 text-center text-gray-800">Payment History</h1>
+            <div class="custom-scrollbar overflow-y-auto max-h-[70vh]">
+                <ul id="payment-history-list" class="space-y-4">
+                    <!-- Payment history items will be rendered here by JavaScript -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Menu Editor View -->
+        <div id="menu-editor-view" class="bg-gray-50 p-6 rounded-2xl shadow-inner hidden flex-col">
+            <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Edit Menu & Prices</h1>
+            <div class="space-y-6 custom-scrollbar overflow-y-auto max-h-[80vh]">
+                <div class="bg-white p-4 rounded-xl shadow-md">
+                    <h2 class="text-xl font-bold mb-4 text-center">Menu Items</h2>
+                    <div id="edit-menu-items" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Menu editor items will be rendered here by JavaScript -->
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-md">
+                    <h2 class="text-xl font-bold mb-4 text-center">Add-ons</h2>
+                    <div id="edit-add-ons" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Add-on editor items will be rendered here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-center space-x-4">
+                <button id="save-menu-btn" class="py-2 px-6 rounded-xl text-white font-bold bg-green-500 hover:bg-green-600 transition-colors">
+                    Save Changes
+                </button>
+                <button id="cancel-menu-btn" class="py-2 px-6 rounded-xl text-gray-600 font-bold bg-gray-200 hover:bg-gray-300 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+
+        <!-- Staff Management View -->
+        <div id="staff-view" class="bg-gray-50 p-6 rounded-2xl shadow-inner hidden flex-col space-y-6">
+            <h1 class="text-3xl font-bold text-center text-gray-800">Staff Management</h1>
+            <div class="bg-white p-6 rounded-2xl shadow-md space-y-4">
+                <h2 class="text-xl font-semibold text-center mb-2">Add New Employee</h2>
+                <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                    <input type="text" id="employee-name" placeholder="Employee Name" class="flex-grow p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="employee-role" placeholder="Role (e.g., Waiter)" class="flex-grow p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="number" id="employee-salary" placeholder="Monthly Salary (৳)" class="flex-grow p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="add-employee-btn" class="py-3 px-6 rounded-xl text-white font-bold bg-green-500 hover:bg-green-600 transition-colors shadow-md">Add Employee</button>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-md">
+                <h2 class="text-xl font-semibold text-center mb-4">Current Staff</h2>
+                <ul id="employee-list" class="space-y-2 custom-scrollbar overflow-y-auto max-h-[50vh]">
+                    <!-- Employee items will be rendered here by JavaScript -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Attendance View -->
+        <div id="attendance-view" class="bg-gray-50 p-6 rounded-2xl shadow-inner hidden flex-col space-y-4">
+            <div class="flex items-center justify-between">
+                <button id="back-to-staff-btn" class="p-2 rounded-full hover:bg-gray-200 transition-colors">
+                    <i class="ph-bold ph-arrow-left text-2xl text-gray-700"></i>
+                </button>
+                <h1 class="text-3xl font-bold text-center text-gray-800" id="attendance-title">Attendance Sheet</h1>
+                <div></div> <!-- Placeholder for alignment -->
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-md custom-scrollbar overflow-y-auto max-h-[70vh]">
+                <table class="min-w-full text-left divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Clock-In</th>
+                            <th class="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Clock-Out</th>
+                            <th class="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-list" class="bg-white divide-y divide-gray-200">
+                        <!-- Attendance records will be rendered here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Expenses View -->
+        <div id="expenses-view" class="bg-gray-50 p-6 rounded-2xl shadow-inner hidden flex-col space-y-6">
+            <h1 class="text-3xl font-bold text-center text-gray-800">Manage Expenses</h1>
+            <div class="bg-white p-6 rounded-2xl shadow-md space-y-4">
+                <h2 class="text-xl font-semibold text-center mb-2">Add New Expense</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="number" id="expense-amount" placeholder="Amount (৳)" class="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <input type="text" id="expense-description" placeholder="Description (e.g., Flour for pizza)" class="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <select id="expense-category" class="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
+                        <option value="">Select Category</option>
+                        <option value="Rent">Rent</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Supplies">Supplies</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <button id="add-expense-btn" class="w-full py-3 px-6 rounded-xl text-white font-bold bg-fuchsia-500 hover:bg-fuchsia-600 transition-colors shadow-md">Add Expense</button>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-md">
+                <h2 class="text-xl font-semibold text-center mb-4">Expense History</h2>
+                <ul id="expense-list" class="space-y-2 custom-scrollbar overflow-y-auto max-h-[50vh]">
+                    <!-- Expense items will be rendered here by JavaScript -->
+                </ul>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- Payment Processing Modal -->
+    <div id="payment-modal" class="modal fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50 hidden z-50">
+        <div class="bg-white p-8 rounded-3xl shadow-xl max-w-sm w-full text-center">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">Payment Details</h3>
+            <div class="mb-4">
+                <label for="customer-name" class="block text-left text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                <input type="text" id="customer-name" class="w-full p-2 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., John Doe">
+            </div>
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-lg font-semibold text-gray-700">Total Due:</span>
+                <span id="modal-total-due" class="text-lg font-bold text-gray-900"></span>
+            </div>
+             <div class="mb-4">
+                <label for="discount-percentage" class="block text-left text-sm font-medium text-gray-700 mb-1">Discount (%)</label>
+                <input type="number" id="discount-percentage" step="1" min="0" max="100" class="w-full p-2 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Enter discount %" value="0">
+            </div>
+            <div class="mb-4">
+                <label class="block text-left text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                <div class="flex justify-between items-center space-x-2">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="payment-method" value="Cash" checked class="form-radio text-green-500 h-5 w-5">
+                        <span class="ml-2 text-gray-700">Cash</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="payment-method" value="Card" class="form-radio text-blue-500 h-5 w-5">
+                        <span class="ml-2 text-gray-700">Card</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="payment-method" value="Mobile Banking" class="form-radio text-purple-500 h-5 w-5">
+                        <span class="ml-2 text-gray-700">Mobile Banking</span>
+                    </label>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label for="amount-received" class="block text-left text-sm font-medium text-gray-700 mb-1">Amount Received (৳)</label>
+                <input type="number" id="amount-received" step="0.01" class="w-full p-2 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter amount">
+            </div>
+            <div class="flex justify-between items-center mb-6">
+                <span class="text-lg font-semibold text-gray-700">Change Due:</span>
+                <span id="change-due" class="text-lg font-bold text-gray-900">৳0.00</span>
+            </div>
+            <button id="finalize-payment-btn" class="w-full py-3 px-4 rounded-xl text-white font-bold text-lg shadow-lg bg-green-500 hover:bg-green-600 transition-colors">
+                Finalize Payment
+            </button>
+            <button id="cancel-payment-btn" class="w-full mt-2 py-3 px-4 rounded-xl text-gray-600 font-bold text-lg hover:bg-gray-200 transition-colors">
+                Cancel
+            </button>
+        </div>
+    </div>
+    
+    <!-- Bonus Modal -->
+    <div id="bonus-modal" class="modal fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50 hidden z-50">
+        <div class="bg-white p-8 rounded-3xl shadow-xl max-w-sm w-full text-center">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4" id="bonus-modal-title">Give Bonus to Employee</h3>
+            <p class="text-gray-600 mb-4" id="bonus-modal-text">Enter the bonus amount for this employee.</p>
+            <div class="mb-4">
+                <label for="bonus-amount" class="block text-left text-sm font-medium text-gray-700 mb-1">Bonus Amount (৳)</label>
+                <input type="number" id="bonus-amount" step="1" min="0" class="w-full p-2 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g., 500">
+            </div>
+            <button id="finalize-bonus-btn" class="w-full py-3 px-4 rounded-xl text-white font-bold text-lg shadow-lg bg-green-500 hover:bg-green-600 transition-colors">
+                Give Bonus
+            </button>
+            <button id="cancel-bonus-btn" class="w-full mt-2 py-3 px-4 rounded-xl text-gray-600 font-bold text-lg hover:bg-gray-200 transition-colors">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+
+    <!-- Receipt Modal -->
+    <div id="receipt-modal" class="modal fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50 hidden z-50">
+        <div class="bg-white p-8 rounded-3xl shadow-xl max-w-xs w-full text-center font-mono" id="receipt-content">
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">My Restaurant</h3>
+            <div class="text-sm text-gray-500 mb-4" id="receipt-info"></div>
+            <div class="border-t border-b border-dashed border-gray-300 py-4 mb-4">
+                <ul id="receipt-items" class="text-left space-y-1">
+                    <!-- Receipt items will be here -->
+                </ul>
+            </div>
+            <div class="text-right space-y-1 text-sm mb-4">
+                <p>Subtotal: <span id="receipt-subtotal" class="font-bold"></span></p>
+                <p>Discount: <span id="receipt-discount" class="font-bold"></span></p>
+                <p>Tax: <span id="receipt-tax" class="font-bold"></span></p>
+                <p class="text-lg font-extrabold">Total: <span id="receipt-total"></span></p>
+            </div>
+            <div class="text-right space-y-1 text-sm mb-6">
+                <p>Amount Paid: <span id="receipt-paid" class="font-bold"></span></p>
+                <p class="text-lg font-extrabold text-blue-600">Change: <span id="receipt-change"></span></p>
+            </div>
+             <p class="text-xs font-semibold">Payment Method: <span id="receipt-payment-method"></span></p>
+        </div>
+        <!-- Buttons are outside the content to not be included in the PDF -->
+        <div class="absolute bottom-4 flex flex-col space-y-2 w-full max-w-xs">
+            <button id="download-receipt-pdf-btn" class="w-full py-3 rounded-xl text-white font-bold bg-purple-500 hover:bg-purple-600 shadow-lg transition-opacity">
+                <i class="ph-bold ph-file-pdf text-lg mr-2"></i>
+                Download PDF
+            </button>
+            <button id="close-receipt-btn" class="w-full py-3 rounded-xl text-white font-bold bg-green-500 hover:bg-green-600 shadow-lg transition-opacity">
+                Close
+            </button>
+        </div>
+    </div>
+    
+    <!-- Salary Invoice Modal -->
+    <div id="salary-invoice-modal" class="modal fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50 hidden z-50">
+        <div class="bg-white p-8 rounded-3xl shadow-xl max-w-sm w-full text-center font-mono" id="salary-invoice-content">
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">Salary Invoice</h3>
+            <div class="text-sm text-gray-500 mb-4" id="invoice-info"></div>
+            <div class="border-t-4 border-b-4 border-dashed border-gray-300 py-6 mb-6">
+                <div class="flex flex-col space-y-2 text-left">
+                    <p class="text-lg font-semibold">Employee: <span id="invoice-employee-name" class="font-bold"></span></p>
+                    <p class="text-lg font-semibold">Role: <span id="invoice-employee-role" class="font-bold"></span></p>
+                    <p class="text-lg font-semibold">Salary: <span id="invoice-salary" class="font-bold text-green-600"></span></p>
+                    <p class="text-sm text-gray-500 mt-2">Paid on: <span id="invoice-date"></span></p>
+                </div>
+            </div>
+            <p class="text-xl font-bold text-gray-700">Payment Processed</p>
+            <p class="text-xs text-gray-400 mt-2">Thank you for being a valuable member of our team!</p>
+        </div>
+        <div class="absolute bottom-4 flex flex-col space-y-2 w-full max-w-xs">
+            <button id="close-invoice-btn" class="w-full py-3 rounded-xl text-white font-bold bg-blue-500 hover:bg-blue-600 shadow-lg transition-opacity">
+                Close Invoice
+            </button>
+        </div>
+    </div>
+
+    <!-- Hidden element for PDF export content -->
+    <div id="pdf-export-content" class="p-8 hidden">
+        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Restaurant Data Report</h1>
+        <p class="text-center text-gray-500 mb-8">Generated on: <span id="pdf-export-date"></span></p>
+        
+        <h2 class="text-2xl font-bold mb-4 text-gray-700">Current Tables</h2>
+        <table class="min-w-full bg-white border border-gray-200 mb-8">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="py-2 px-4 border-b">Table Name</th>
+                    <th class="py-2 px-4 border-b">Order Status</th>
+                    <th class="py-2 px-4 border-b">Total Items</th>
+                    <th class="py-2 px-4 border-b">Discount %</th>
+                </tr>
+            </thead>
+            <tbody id="pdf-tables"></tbody>
+        </table>
+
+        <h2 class="text-2xl font-bold mb-4 text-gray-700">Payment History</h2>
+        <table class="min-w-full bg-white border border-gray-200 mb-8">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="py-2 px-4 border-b">Customer Name</th>
+                    <th class="py-2 px-4 border-b">Table</th>
+                    <th class="py-2 px-4 border-b">Total</th>
+                    <th class="py-2 px-4 border-b">Date</th>
+                </tr>
+            </thead>
+            <tbody id="pdf-payments"></tbody>
+        </table>
+
+        <h2 class="text-2xl font-bold mb-4 text-gray-700">Employee List</h2>
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="py-2 px-4 border-b">Name</th>
+                    <th class="py-2 px-4 border-b">Role</th>
+                    <th class="py-2 px-4 border-b">Monthly Salary</th>
+                    <th class="py-2 px-4 border-b">Total Hours</th>
+                </tr>
+            </thead>
+            <tbody id="pdf-employees"></tbody>
+        </table>
+        
+        <h2 class="text-2xl font-bold mb-4 text-gray-700">Expense History</h2>
+        <table class="min-w-full bg-white border border-gray-200">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="py-2 px-4 border-b">Description</th>
+                    <th class="py-2 px-4 border-b">Category</th>
+                    <th class="py-2 px-4 border-b">Amount</th>
+                    <th class="py-2 px-4 border-b">Date</th>
+                </tr>
+            </thead>
+            <tbody id="pdf-expenses"></tbody>
+        </table>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+        import { getFirestore, doc, addDoc, setDoc, onSnapshot, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // OpenWeatherMap API details
+        const WEATHER_API_KEY = "3a2a9009941a1a67a0a09e0279932130"; // Free API key for demonstration
+        const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather?units=metric";
+        const WEATHER_ICON_URL = "https://openweathermap.org/img/wn/";
+
+        // Initialize Firebase
+        let app, db, auth;
+        if (Object.keys(firebaseConfig).length > 0) {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            console.log("Firebase initialized.");
+        } else {
+            console.error("Firebase config is missing.");
+            document.body.innerHTML = '<div class="flex items-center justify-center h-screen"><p class="text-red-500 font-bold">Error: Firebase configuration is not available.</p></div>';
+        }
+
+        // --- AUTHENTICATION & BRANCH SELECTION ---
+        let userId;
+        let branchId = localStorage.getItem('selectedBranchId');
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                console.log("User signed in with UID:", userId);
+                document.getElementById('userIdDisplay').textContent = userId;
+                if (!branchId) {
+                    showBranchModal();
+                } else {
+                    document.getElementById('branch-modal').classList.add('hidden');
+                    document.getElementById('main-app').classList.remove('hidden');
+                    document.getElementById('main-app').classList.add('flex');
+                    setupFirestoreListeners();
+                }
+            } else {
+                console.log("No user signed in. Attempting to authenticate.");
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        console.log("Signed in with custom token.");
+                    } else {
+                        await signInAnonymously(auth);
+                        console.log("Signed in anonymously.");
+                    }
+                } catch (error) {
+                    console.error("Authentication error:", error);
+                    document.getElementById('userIdDisplay').textContent = 'Error during auth';
+                }
+            }
+        });
+
+        const showBranchModal = async () => {
+            const branchModal = document.getElementById('branch-modal');
+            const branchList = document.getElementById('branch-list');
+            branchList.innerHTML = '';
+            
+            const branchesColRef = collection(db, `artifacts/${appId}/public/data/branches-meta`);
+            const branchesSnapshot = await getDocs(branchesColRef);
+            
+            branchesSnapshot.forEach(doc => {
+                const li = document.createElement('li');
+                li.className = 'cursor-pointer p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors';
+                li.textContent = doc.data().name;
+                li.addEventListener('click', () => selectBranch(doc.id));
+                branchList.appendChild(li);
+            });
+            
+            branchModal.classList.remove('hidden');
+        };
+
+        const selectBranch = (id) => {
+            branchId = id;
+            localStorage.setItem('selectedBranchId', id);
+            document.getElementById('branch-modal').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('main-app').classList.add('flex');
+            setupFirestoreListeners();
+        };
+
+        document.getElementById('create-branch-btn').addEventListener('click', async () => {
+            const newBranchName = document.getElementById('new-branch-name').value.trim();
+            if (newBranchName) {
+                const branchesColRef = collection(db, `artifacts/${appId}/public/data/branches-meta`);
+                const docRef = await addDoc(branchesColRef, { name: newBranchName, createdAt: Date.now() });
+                selectBranch(docRef.id);
+            } else {
+                showModal('Please enter a valid branch name.');
+            }
+        });
+
+
+        // --- APPLICATION STATE ---
+        const getBranchPath = (path) => `artifacts/${appId}/public/data/branches/${branchId}/${path}`;
+        
+        let tables = {};
+        let payments = {};
+        let employees = {};
+        let expenses = {};
+        let allBranchesRevenue = {};
+        let selectedTableId = null;
+        let selectedEmployeeId = null;
+        let tablesChart = null; // Variable to hold the Chart.js instance
+        let dailyRevenueChart = null;
+        let bestSellingChart = null;
+        let branchRevenueChart = null;
+
+        // The menu data is now a mutable state variable
+        let customMenuItems = [{
+            name: "Pizza",
+            price: 1705.00,
+            color: "#ef4444"
+        }, {
+            name: "Burger",
+            price: 1100.00,
+            color: "#f97316"
+        }, {
+            name: "Pasta",
+            price: 1402.50,
+            color: "#f59e0b"
+        }, {
+            name: "Salad",
+            price: 907.50,
+            color: "#22c55e"
+        }, {
+            name: "Steak",
+            price: 2750.00,
+            color: "#dc2626"
+        }, {
+            name: "Tacos",
+            price: 1045.00,
+            color: "#fde047"
+        }, {
+            name: "Soup",
+            price: 660.00,
+            color: "#a855f7"
+        }, {
+            name: "Coffee",
+            price: 385.00,
+            color: "#783c07"
+        }, {
+            name: "Cheesecake",
+            price: 770.00,
+            color: "#e879f9"
+        }, {
+            name: "Fries",
+            price: 495.00,
+            color: "#fbbf24"
+        }, {
+            name: "Nachos",
+            price: 880.00,
+            color: "#f59e0b"
+        }];
+
+        let customAddOnItems = [{
+            name: "Coca-Cola",
+            price: 275.00,
+            color: "#f87171"
+        }, {
+            name: "Sprite",
+            price: 275.00,
+            color: "#4ade80"
+        }, {
+            name: "Lemonade",
+            price: 330.00,
+            color: "#fcd34d"
+        }, {
+            name: "Iced Tea",
+            price: 302.50,
+            color: "#783c07"
+        }, ];
+
+        // --- FIREBASE LISTENERS & DATA FUNCTIONS ---
+        const setupFirestoreListeners = () => {
+            if (!branchId) return;
+
+            const tablesColRef = collection(db, getBranchPath('tables'));
+            onSnapshot(tablesColRef, (snapshot) => {
+                const updatedTables = {};
+                snapshot.forEach(doc => {
+                    updatedTables[doc.id] = {
+                        id: doc.id,
+                        ...doc.data()
+                    };
+                });
+                tables = updatedTables;
+                renderTables();
+                renderOrder();
+                renderDashboard(); 
+                console.log("Tables data updated from Firestore.");
+            }, (error) => {
+                console.error("Error fetching tables:", error);
+            });
+            
+            const paymentsColRef = collection(db, getBranchPath('payments'));
+            onSnapshot(paymentsColRef, (snapshot) => {
+                const updatedPayments = {};
+                snapshot.forEach(doc => {
+                    updatedPayments[doc.id] = {
+                        id: doc.id,
+                        ...doc.data()
+                    };
+                });
+                payments = updatedPayments;
+                renderPaymentHistory();
+                renderDashboard();
+                console.log("Payments data updated from Firestore.");
+            }, (error) => {
+                console.error("Error fetching payments:", error);
+            });
+            
+            const employeesColRef = collection(db, getBranchPath('employees'));
+            onSnapshot(employeesColRef, (snapshot) => {
+                const updatedEmployees = {};
+                snapshot.forEach(doc => {
+                    updatedEmployees[doc.id] = { id: doc.id, ...doc.data() };
+                });
+                employees = updatedEmployees;
+                renderEmployeeList();
+                renderDashboard();
+                if (selectedEmployeeId) renderAttendanceSheet(selectedEmployeeId);
+                console.log("Employees data updated from Firestore.");
+            }, (error) => {
+                console.error("Error fetching employees:", error);
+            });
+            
+            const expensesColRef = collection(db, getBranchPath('expenses'));
+            onSnapshot(expensesColRef, (snapshot) => {
+                const updatedExpenses = {};
+                snapshot.forEach(doc => {
+                    updatedExpenses[doc.id] = { id: doc.id, ...doc.data() };
+                });
+                expenses = updatedExpenses;
+                renderExpenseList();
+                renderDashboard();
+                console.log("Expenses data updated from Firestore.");
+            }, (error) => {
+                console.error("Error fetching expenses:", error);
+            });
+            
+            // Listener for all branches to power global analytics
+            const allBranchesMetaRef = collection(db, `artifacts/${appId}/public/data/branches-meta`);
+            onSnapshot(allBranchesMetaRef, (snapshot) => {
+                const branches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                fetchRevenueForAllBranches(branches);
+            }, (error) => {
+                console.error("Error fetching all branches:", error);
+            });
+        };
+
+        const fetchRevenueForAllBranches = async (branches) => {
+            const revenuePromises = branches.map(async (branch) => {
+                const paymentsColRef = collection(db, `artifacts/${appId}/public/data/branches/${branch.id}/payments`);
+                const paymentsSnapshot = await getDocs(paymentsColRef);
+                let totalRevenue = 0;
+                paymentsSnapshot.forEach(doc => {
+                    totalRevenue += doc.data().total || 0;
+                });
+                return { name: branch.name, revenue: totalRevenue };
+            });
+
+            const revenues = await Promise.all(revenuePromises);
+            allBranchesRevenue = {};
+            revenues.forEach(r => {
+                allBranchesRevenue[r.name] = r.revenue;
+            });
+            renderDashboard();
+        };
+
+        const updateTableInDb = async (tableId, tableData) => {
+            if (!userId || !branchId) {
+                console.error("User or branch not authenticated. Cannot update table.");
+                return;
+            }
+            try {
+                const tableDocRef = doc(db, getBranchPath('tables'), tableId);
+                await setDoc(tableDocRef, tableData, {
+                    merge: true
+                });
+                console.log(`Table ${tableId} updated successfully.`);
+            } catch (e) {
+                console.error("Error updating document:", e);
+            }
+        };
+        
+        const createPaymentInDb = async (paymentData) => {
+            if (!userId || !branchId) {
+                console.error("User or branch not authenticated. Cannot create payment record.");
+                return;
+            }
+            try {
+                const paymentsColRef = collection(db, getBranchPath('payments'));
+                await addDoc(paymentsColRef, paymentData);
+                console.log("Payment record created successfully.");
+            } catch (e) {
+                console.error("Error creating payment record:", e);
+            }
+        };
+
+        const createTableInDb = async (tableData) => {
+            if (!userId || !branchId) {
+                console.error("User or branch not authenticated. Cannot create table.");
+                return;
+            }
+            try {
+                const tablesColRef = collection(db, getBranchPath('tables'));
+                const docRef = await addDoc(tablesColRef, tableData);
+                console.log("New table created with ID:", docRef.id);
+            } catch (e) {
+                console.error("Error creating new table:", e);
+            }
+        };
+
+        const getOrCreateTables = async () => {
+            if (!userId || !branchId) return;
+            const tablesColRef = collection(db, getBranchPath('tables'));
+            const snapshot = await getDocs(tablesColRef);
+            if (snapshot.empty) {
+                console.log("No tables found. Creating default tables.");
+                for (let i = 1; i <= 8; i++) {
+                    await createTableInDb({
+                        name: `Table ${i}`,
+                        order: [],
+                        isPaid: false,
+                        discountPercentage: 0
+                    });
+                }
+            } else {
+                console.log("Existing tables found.");
+            }
+        };
+
+        const addEmployeeToDb = async (employeeData) => {
+             if (!userId || !branchId) {
+                console.error("User or branch not authenticated. Cannot add employee.");
+                return;
+            }
+            try {
+                const employeesColRef = collection(db, getBranchPath('employees'));
+                await addDoc(employeesColRef, employeeData);
+                console.log("New employee added successfully.");
+            } catch (e) {
+                console.error("Error adding new employee:", e);
+            }
+        };
+
+        const updateEmployeeInDb = async (employeeId, employeeData) => {
+            if (!userId || !branchId) {
+                console.error("User or branch not authenticated. Cannot update employee.");
+                return;
+            }
+            try {
+                const employeeDocRef = doc(db, getBranchPath('employees'), employeeId);
+                await setDoc(employeeDocRef, employeeData, { merge: true });
+                console.log(`Employee ${employeeId} updated successfully.`);
+            } catch (e) {
+                console.error("Error updating employee:", e);
+            }
+        };
+        
+        const createExpenseInDb = async (expenseData) => {
+            if (!userId || !branchId) {
+                console.error("User or branch not authenticated. Cannot add expense.");
+                return;
+            }
+            try {
+                const expensesColRef = collection(db, getBranchPath('expenses'));
+                await addDoc(expensesColRef, expenseData);
+                console.log("New expense added successfully.");
+            } catch (e) {
+                console.error("Error adding new expense:", e);
+            }
+        };
+
+        const createAttendanceRecordInDb = async (employeeId, record) => {
+            if (!userId || !branchId) {
+                console.error("User or branch not authenticated. Cannot create attendance record.");
+                return;
+            }
+            try {
+                const attendanceColRef = collection(db, getBranchPath(`employees/${employeeId}/attendance`));
+                const docRef = await addDoc(attendanceColRef, record);
+                console.log("Attendance record created successfully.");
+                return docRef.id;
+            } catch (e) {
+                console.error("Error creating attendance record:", e);
+            }
+        };
+
+        const updateAttendanceRecordInDb = async (employeeId, recordId, record) => {
+            if (!userId || !branchId) {
+                console.error("User or branch not authenticated. Cannot update attendance record.");
+                return;
+            }
+            try {
+                const attendanceDocRef = doc(db, getBranchPath(`employees/${employeeId}/attendance`), recordId);
+                await setDoc(attendanceDocRef, record, { merge: true });
+                console.log("Attendance record updated successfully.");
+            } catch (e) {
+                console.error("Error updating attendance record:", e);
+            }
+        };
+
+        // --- UI RENDER FUNCTIONS ---
+        const renderMenu = () => {
+            const menuContainer = document.getElementById('menu-items');
+            menuContainer.innerHTML = '';
+            customMenuItems.forEach(item => {
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-xl shadow-md cursor-pointer transform hover:scale-105 transition-transform duration-200 border border-gray-200`;
+                div.style.backgroundColor = item.color; // Apply color directly for vividness
+                div.innerHTML = `
+                    <p class="text-white text-lg font-bold">${item.name}</p>
+                    <p class="text-white text-sm opacity-90">৳${item.price.toFixed(2)}</p>
+                `;
+                div.addEventListener('click', () => addItemToOrder(item));
+                menuContainer.appendChild(div);
+            });
+
+            const addOnContainer = document.getElementById('add-on-items');
+            addOnContainer.innerHTML = '';
+            customAddOnItems.forEach(item => {
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-xl shadow-md cursor-pointer transform hover:scale-105 transition-transform duration-200 border border-gray-200`;
+                div.style.backgroundColor = item.color; // Apply color directly for vividness
+                div.innerHTML = `
+                    <p class="text-white text-lg font-bold">${item.name}</p>
+                    <p class="text-white text-sm opacity-90">৳${item.price.toFixed(2)}</p>
+                `;
+                div.addEventListener('click', () => addItemToOrder(item));
+                addOnContainer.appendChild(div);
+            });
+        };
+
+        const renderMenuEditor = () => {
+            const editMenuContainer = document.getElementById('edit-menu-items');
+            editMenuContainer.innerHTML = '';
+            customMenuItems.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = `bg-gray-100 p-4 rounded-xl space-y-2`;
+                div.innerHTML = `
+                    <div class="flex flex-col">
+                        <label for="name-${index}" class="text-xs font-semibold text-gray-600">Name</label>
+                        <input type="text" id="name-${index}" value="${item.name}" class="p-2 border rounded-lg text-sm">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="price-${index}" class="text-xs font-semibold text-gray-600">Price (৳)</label>
+                        <input type="number" id="price-${index}" value="${item.price}" step="0.01" class="p-2 border rounded-lg text-sm">
+                    </div>
+                `;
+                editMenuContainer.appendChild(div);
+            });
+
+            const editAddOnContainer = document.getElementById('edit-add-ons');
+            editAddOnContainer.innerHTML = '';
+            customAddOnItems.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = `bg-gray-100 p-4 rounded-xl space-y-2`;
+                div.innerHTML = `
+                    <div class="flex flex-col">
+                        <label for="addon-name-${index}" class="text-xs font-semibold text-gray-600">Name</label>
+                        <input type="text" id="addon-name-${index}" value="${item.name}" class="p-2 border rounded-lg text-sm">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="addon-price-${index}" class="text-xs font-semibold text-gray-600">Price (৳)</label>
+                        <input type="number" id="addon-price-${index}" value="${item.price}" step="0.01" class="p-2 border rounded-lg text-sm">
+                    </div>
+                `;
+                editAddOnContainer.appendChild(div);
+            });
+        };
+
+        const saveMenuChanges = () => {
+            const newMenuItems = [];
+            const newAddOnItems = [];
+
+            customMenuItems.forEach((item, index) => {
+                const nameInput = document.getElementById(`name-${index}`);
+                const priceInput = document.getElementById(`price-${index}`);
+                newMenuItems.push({
+                    name: nameInput.value,
+                    price: parseFloat(priceInput.value),
+                    color: item.color
+                });
+            });
+
+            customAddOnItems.forEach((item, index) => {
+                const nameInput = document.getElementById(`addon-name-${index}`);
+                const priceInput = document.getElementById(`addon-price-${index}`);
+                newAddOnItems.push({
+                    name: nameInput.value,
+                    price: parseFloat(priceInput.value),
+                    color: item.color
+                });
+            });
+
+            customMenuItems = newMenuItems;
+            customAddOnItems = newAddOnItems;
+            renderMenu();
+            toggleView('manager');
+        };
+
+        const renderTables = () => {
+            const tableSelector = document.getElementById('table-selector');
+            tableSelector.innerHTML = '';
+            Object.values(tables).forEach(table => {
+                const button = document.createElement('button');
+                const isSelected = selectedTableId === table.id;
+                const totalItems = table.order.reduce((sum, item) => sum + item.quantity, 0);
+                const buttonColor = table.isPaid ? 'bg-green-300 hover:bg-green-400' : (totalItems > 0 ? 'bg-yellow-300 hover:bg-yellow-400' : 'bg-gray-300 hover:bg-gray-400');
+
+                button.className = `p-3 rounded-lg font-semibold text-gray-800 transition-colors ${isSelected ? 'ring-4 ring-blue-500' : ''} ${buttonColor}`;
+                button.textContent = table.name;
+                button.addEventListener('click', () => selectTable(table.id));
+                tableSelector.appendChild(button);
+            });
+        };
+        
+        const calculateTotals = () => {
+            const table = tables[selectedTableId];
+            if (!table) return {
+                subtotal: 0,
+                discount: 0,
+                tax: 0,
+                total: 0
+            };
+
+            const subtotal = table.order.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const discountPercentage = tables[selectedTableId].discountPercentage || 0;
+            const discountAmount = subtotal * (discountPercentage / 100);
+            const subtotalAfterDiscount = subtotal - discountAmount;
+            const tax = subtotalAfterDiscount * 0.08;
+            const total = subtotalAfterDiscount + tax;
+
+            return {
+                subtotal,
+                discount: discountAmount,
+                tax,
+                total
+            };
+        };
+
+        const renderOrder = () => {
+            const orderList = document.getElementById('order-list');
+            const subtotalEl = document.getElementById('subtotal');
+            const discountEl = document.getElementById('discount-display');
+            const taxEl = document.getElementById('tax');
+            const totalEl = document.getElementById('total');
+            const payButton = document.getElementById('pay-button');
+            const orderTitle = document.getElementById('order-title');
+
+
+            orderList.innerHTML = '';
+            
+            if (selectedTableId && tables[selectedTableId]) {
+                const table = tables[selectedTableId];
+                orderTitle.textContent = `${table.name} Order`;
+                table.order.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-lg';
+                    li.innerHTML = `
+                        <span class="font-medium">${item.name}</span>
+                        <div class="flex items-center space-x-2">
+                            <button class="bg-gray-200 rounded-full w-6 h-6 flex items-center justify-center text-gray-700 hover:bg-gray-300 transition-colors" data-action="decrement" data-item="${item.name}">-</button>
+                            <span class="font-bold">${item.quantity}</span>
+                            <button class="bg-gray-200 rounded-full w-6 h-6 flex items-center justify-center text-gray-700 hover:bg-gray-300 transition-colors" data-action="increment" data-item="${item.name}">+</button>
+                        </div>
+                    `;
+                    orderList.appendChild(li);
+                });
+
+                const {
+                    subtotal,
+                    discount,
+                    tax,
+                    total
+                } = calculateTotals();
+                subtotalEl.textContent = `৳${subtotal.toFixed(2)}`;
+                discountEl.textContent = `৳${discount.toFixed(2)}`;
+                taxEl.textContent = `৳${tax.toFixed(2)}`;
+                totalEl.textContent = `৳${total.toFixed(2)}`;
+                payButton.style.display = subtotal > 0 ? 'block' : 'none';
+
+            } else {
+                orderTitle.textContent = "Select a Table";
+                subtotalEl.textContent = `৳0.00`;
+                discountEl.textContent = `৳0.00`;
+                taxEl.textContent = `৳0.00`;
+                totalEl.textContent = `৳0.00`;
+                payButton.style.display = 'none';
+            }
+            
+            // Add event listeners for the new buttons
+            orderList.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const action = e.target.dataset.action;
+                    const itemName = e.target.dataset.item;
+                    if (action && itemName) {
+                        changeItemQuantity(itemName, action);
+                    }
+                });
+            });
+
+        };
+
+        const renderPaymentHistory = () => {
+            const historyList = document.getElementById('payment-history-list');
+            historyList.innerHTML = '';
+            const sortedPayments = Object.values(payments).sort((a, b) => b.timestamp - a.timestamp);
+            
+            sortedPayments.forEach(payment => {
+                const date = new Date(payment.timestamp);
+                const li = document.createElement('li');
+                li.className = `bg-white p-4 rounded-xl shadow-md flex justify-between items-center transition-transform hover:scale-[1.01] duration-200`;
+                li.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-lg">${payment.customerName || 'N/A'}</p>
+                        <p class="text-sm text-gray-500">${payment.tableName} - ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-lg font-bold text-green-600">৳${payment.total.toFixed(2)}</p>
+                        <p class="text-xs text-gray-400">Paid by ${payment.paymentMethod || 'N/A'}</p>
+                    </div>
+                `;
+                historyList.appendChild(li);
+            });
+            if (sortedPayments.length === 0) {
+                historyList.innerHTML = `<p class="text-center text-gray-500 mt-8">No payments recorded yet.</p>`;
+            }
+        };
+        
+        const renderDashboard = () => {
+            const paidTables = Object.values(tables).filter(t => t.isPaid).length;
+            const openTables = Object.values(tables).filter(t => t.order.length > 0 && !t.isPaid).length;
+            const emptyTables = Object.values(tables).filter(t => t.order.length === 0 && !t.isPaid).length;
+            
+            let totalRevenue = 0;
+            let totalBonuses = 0;
+            let totalMonthlySalary = 0;
+            let itemSales = {};
+            let dailyRevenue = {};
+            let totalExpenses = 0;
+
+
+            Object.values(payments).forEach(p => {
+                totalRevenue += p.total;
+                const date = new Date(p.timestamp).toLocaleDateString();
+                dailyRevenue[date] = (dailyRevenue[date] || 0) + p.total;
+                p.order.forEach(item => {
+                    itemSales[item.name] = (itemSales[item.name] || 0) + item.quantity;
+                });
+            });
+
+            Object.values(expenses).forEach(e => {
+                totalExpenses += e.amount;
+            });
+            
+            let staffWorking = 0;
+            let totalStaffHours = 0;
+            Object.values(employees).forEach(e => {
+                totalBonuses += e.totalBonuses || 0;
+                totalMonthlySalary += e.monthlySalary || 0;
+                totalStaffHours += e.totalHours || 0;
+                if (e.isWorking) {
+                    staffWorking++;
+                }
+            });
+            
+            document.getElementById('total-revenue-display').textContent = `৳${totalRevenue.toFixed(2)}`;
+            document.getElementById('total-expenses-display').textContent = `৳${totalExpenses.toFixed(2)}`;
+            document.getElementById('staff-working-display').textContent = staffWorking;
+            document.getElementById('total-hours-display').textContent = `${totalStaffHours.toFixed(1)}h`;
+            document.getElementById('total-salary-display').textContent = `৳${totalMonthlySalary.toFixed(0)}`;
+            document.getElementById('total-bonuses-display').textContent = `৳${totalBonuses.toFixed(0)}`;
+
+
+            // Table Status Chart (Pie Chart)
+            const tableChartData = {
+                labels: ['Paid', 'Open', 'Empty'],
+                datasets: [{
+                    data: [paidTables, openTables, emptyTables],
+                    backgroundColor: ['#10b981', '#f59e0b', '#6b7280'],
+                    hoverOffset: 4
+                }]
+            };
+            if (tablesChart) tablesChart.destroy();
+            tablesChart = new Chart(document.getElementById('tables-chart'), { type: 'pie', data: tableChartData });
+
+            // Branch Revenue Chart (Pie Chart)
+            const branchChartData = {
+                labels: Object.keys(allBranchesRevenue),
+                datasets: [{
+                    label: 'Total Revenue by Branch',
+                    data: Object.values(allBranchesRevenue),
+                    backgroundColor: ['#4299e1', '#f6ad55', '#9f7aea', '#d53f8c'],
+                    hoverOffset: 4
+                }]
+            };
+            if (branchRevenueChart) branchRevenueChart.destroy();
+            branchRevenueChart = new Chart(document.getElementById('branch-revenue-chart'), { type: 'pie', data: branchChartData });
+
+            // Daily Revenue Chart (Line Chart)
+            const sortedDates = Object.keys(dailyRevenue).sort((a,b) => new Date(a) - new Date(b));
+            const dailyRevenueData = {
+                labels: sortedDates,
+                datasets: [{
+                    label: 'Daily Revenue',
+                    data: sortedDates.map(date => dailyRevenue[date]),
+                    borderColor: '#34d399',
+                    tension: 0.4,
+                    fill: false
+                }]
+            };
+            if (dailyRevenueChart) dailyRevenueChart.destroy();
+            dailyRevenueChart = new Chart(document.getElementById('daily-revenue-chart'), { type: 'line', data: dailyRevenueData });
+
+            // Best-Selling Items Chart (Bar Chart)
+            const sortedItems = Object.entries(itemSales).sort(([, a], [, b]) => b - a).slice(0, 5);
+            const bestSellingData = {
+                labels: sortedItems.map(([name]) => name),
+                datasets: [{
+                    label: 'Items Sold',
+                    data: sortedItems.map(([, quantity]) => quantity),
+                    backgroundColor: '#4299e1'
+                }]
+            };
+            if (bestSellingChart) bestSellingChart.destroy();
+            bestSellingChart = new Chart(document.getElementById('best-selling-chart'), { type: 'bar', data: bestSellingData });
+        };
+
+        const renderEmployeeList = () => {
+            const employeeList = document.getElementById('employee-list');
+            employeeList.innerHTML = '';
+            Object.values(employees).forEach(employee => {
+                const li = document.createElement('li');
+                li.className = 'bg-white p-4 rounded-xl shadow-sm flex items-center justify-between';
+                const buttonText = employee.isWorking ? 'Clock Out' : 'Clock In';
+                const buttonClass = employee.isWorking ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600';
+                
+                // Check if salary has been paid this month
+                const lastPaidDate = employee.lastPaidDate ? new Date(employee.lastPaidDate) : null;
+                const now = new Date();
+                const isPaidThisMonth = lastPaidDate && lastPaidDate.getMonth() === now.getMonth() && lastPaidDate.getFullYear() === now.getFullYear();
+                const payButtonClass = isPaidThisMonth ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600';
+                const payButtonText = isPaidThisMonth ? 'Paid This Month' : 'Pay Salary';
+                const payButtonDisabled = isPaidThisMonth ? 'disabled' : '';
+
+
+                li.innerHTML = `
+                    <div class="flex-grow">
+                        <p class="font-bold text-lg">${employee.name}</p>
+                        <p class="text-sm text-gray-500">${employee.role}</p>
+                        <p class="text-xs text-gray-400 mt-1">Total Hours: <span class="font-bold text-gray-700">${(employee.totalHours || 0).toFixed(1)}h</span></p>
+                        <p class="text-xs text-gray-400 mt-1">Monthly Salary: <span class="font-bold text-gray-700">৳${(employee.monthlySalary || 0).toFixed(0)}</span></p>
+                        <p class="text-xs text-gray-400 mt-1">Total Bonuses: <span class="font-bold text-gray-700">৳${(employee.totalBonuses || 0).toFixed(0)}</span></p>
+                    </div>
+                    <div class="flex flex-col space-y-2">
+                        <button class="py-2 px-4 rounded-lg text-white font-bold ${buttonClass} transition-colors" data-employee-id="${employee.id}" data-is-working="${employee.isWorking}">${buttonText}</button>
+                        <button class="py-2 px-4 rounded-lg text-white font-bold ${payButtonClass} transition-colors text-xs" data-employee-id="${employee.id}" data-action="pay-salary" ${payButtonDisabled}>${payButtonText}</button>
+                        <button class="py-2 px-4 rounded-lg text-white font-bold bg-blue-500 hover:bg-blue-600 transition-colors text-xs" data-employee-id="${employee.id}" data-action="give-bonus">Give Bonus</button>
+                        <button class="py-2 px-4 rounded-lg text-white font-bold bg-gray-500 hover:bg-gray-600 transition-colors text-xs" data-employee-id="${employee.id}" data-action="view-attendance">View Attendance</button>
+                    </div>
+                `;
+                employeeList.appendChild(li);
+            });
+            if (Object.keys(employees).length === 0) {
+                employeeList.innerHTML = `<p class="text-center text-gray-500 mt-4">No employees added yet.</p>`;
+            }
+
+            employeeList.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const employeeId = e.target.dataset.employeeId;
+                    const action = e.target.dataset.action;
+                    
+                    if (action === 'pay-salary') {
+                        paySalary(employeeId);
+                    } else if (action === 'give-bonus') {
+                        openBonusModal(employeeId);
+                    } else if (action === 'view-attendance') {
+                        viewAttendance(employeeId);
+                    } else {
+                        const isWorking = e.target.dataset.isWorking === 'true';
+                        const employee = employees[employeeId];
+
+                        if (isWorking) {
+                            // Clocking Out
+                            const lastAttendanceRecordRef = doc(db, getBranchPath(`employees/${employeeId}/attendance/${employee.currentAttendanceId}`));
+                            const currentTime = Date.now();
+                            const hoursWorked = (currentTime - employee.clockInTime) / (1000 * 60 * 60);
+                            const newTotalHours = (employee.totalHours || 0) + hoursWorked;
+
+                            await updateEmployeeInDb(employeeId, { isWorking: false, totalHours: newTotalHours, clockInTime: null, currentAttendanceId: null });
+                            await updateAttendanceRecordInDb(employeeId, employee.currentAttendanceId, { clockOutTime: currentTime, hoursWorked: hoursWorked });
+                        } else {
+                            // Clocking In
+                            const recordId = await createAttendanceRecordInDb(employeeId, {
+                                date: new Date().toLocaleDateString(),
+                                clockInTime: Date.now(),
+                                clockOutTime: null,
+                                hoursWorked: 0
+                            });
+                            await updateEmployeeInDb(employeeId, { isWorking: true, clockInTime: Date.now(), currentAttendanceId: recordId });
+                        }
+                    }
+                });
+            });
+        };
+
+        const viewAttendance = async (employeeId) => {
+            selectedEmployeeId = employeeId;
+            toggleView('attendance');
+            renderAttendanceSheet(employeeId);
+        };
+        
+        const renderAttendanceSheet = async (employeeId) => {
+            const attendanceTitle = document.getElementById('attendance-title');
+            const attendanceList = document.getElementById('attendance-list');
+            attendanceList.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">Loading attendance...</td></tr>';
+            
+            const employee = employees[employeeId];
+            if (employee) {
+                attendanceTitle.textContent = `${employee.name}'s Attendance`;
+
+                const attendanceColRef = collection(db, getBranchPath(`employees/${employeeId}/attendance`));
+                const q = query(attendanceColRef, orderBy('clockInTime', 'desc'));
+                const snapshot = await getDocs(q);
+
+                attendanceList.innerHTML = '';
+                if (snapshot.empty) {
+                    attendanceList.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No attendance records found.</td></tr>';
+                } else {
+                    snapshot.forEach(doc => {
+                        const record = doc.data();
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-gray-50';
+                        const clockInTime = record.clockInTime ? new Date(record.clockInTime).toLocaleTimeString() : 'N/A';
+                        const clockOutTime = record.clockOutTime ? new Date(record.clockOutTime).toLocaleTimeString() : 'N/A';
+                        const hours = record.hoursWorked ? record.hoursWorked.toFixed(2) : 'N/A';
+
+                        tr.innerHTML = `
+                            <td class="py-2 px-4">${record.date}</td>
+                            <td class="py-2 px-4">${clockInTime}</td>
+                            <td class="py-2 px-4">${clockOutTime}</td>
+                            <td class="py-2 px-4">${hours !== 'N/A' ? `${hours}h` : 'In Progress'}</td>
+                        `;
+                        attendanceList.appendChild(tr);
+                    });
+                }
+            } else {
+                attendanceList.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Employee not found.</td></tr>';
+            }
+        };
+
+
+        const renderExpenseList = () => {
+            const expenseList = document.getElementById('expense-list');
+            expenseList.innerHTML = '';
+            const sortedExpenses = Object.values(expenses).sort((a,b) => b.timestamp - a.timestamp);
+            
+            if (sortedExpenses.length === 0) {
+                 expenseList.innerHTML = `<p class="text-center text-gray-500 mt-4">No expenses recorded yet.</p>`;
+            } else {
+                sortedExpenses.forEach(expense => {
+                    const li = document.createElement('li');
+                    li.className = 'bg-gray-100 p-4 rounded-lg shadow-sm flex items-center justify-between';
+                    li.innerHTML = `
+                        <div>
+                            <p class="font-semibold text-lg">${expense.description}</p>
+                            <p class="text-sm text-gray-500">${expense.category} - ${new Date(expense.timestamp).toLocaleDateString()}</p>
+                        </div>
+                        <span class="text-lg font-bold text-red-500">৳${expense.amount.toFixed(2)}</span>
+                    `;
+                    expenseList.appendChild(li);
+                });
+            }
+        };
+
+        const paySalary = async (employeeId) => {
+            const employee = employees[employeeId];
+            if (!employee) return;
+            
+            const lastPaidDate = employee.lastPaidDate ? new Date(employee.lastPaidDate) : null;
+            const now = new Date();
+
+            if (lastPaidDate && lastPaidDate.getMonth() === now.getMonth() && lastPaidDate.getFullYear() === now.getFullYear()) {
+                showModal(`${employee.name}'s salary has already been paid for this month.`);
+                return;
+            }
+
+            await updateEmployeeInDb(employeeId, { lastPaidDate: Date.now() });
+            
+            // Show invoice modal
+            showSalaryInvoice(employee);
+        };
+        
+        const openBonusModal = (employeeId) => {
+            const employee = employees[employeeId];
+            if (!employee) return;
+
+            document.getElementById('bonus-modal-title').textContent = `Give Bonus to ${employee.name}`;
+            document.getElementById('bonus-amount').value = '';
+            document.getElementById('finalize-bonus-btn').dataset.employeeId = employeeId;
+            document.getElementById('bonus-modal').classList.remove('hidden');
+        };
+
+        const finalizeBonus = async () => {
+            const employeeId = document.getElementById('finalize-bonus-btn').dataset.employeeId;
+            const employee = employees[employeeId];
+            const bonusAmount = parseFloat(document.getElementById('bonus-amount').value);
+
+            if (isNaN(bonusAmount) || bonusAmount <= 0) {
+                showModal('Please enter a valid bonus amount.');
+                return;
+            }
+
+            const newTotalBonuses = (employee.totalBonuses || 0) + bonusAmount;
+            await updateEmployeeInDb(employeeId, { totalBonuses: newTotalBonuses });
+            document.getElementById('bonus-modal').classList.add('hidden');
+            showModal(`${employee.name} has been given a bonus of ৳${bonusAmount.toFixed(0)}.`);
+        };
+        
+        const showSalaryInvoice = (employee) => {
+            const salaryInvoiceModal = document.getElementById('salary-invoice-modal');
+            
+            document.getElementById('invoice-employee-name').textContent = employee.name;
+            document.getElementById('invoice-employee-role').textContent = employee.role;
+            document.getElementById('invoice-salary').textContent = `৳${employee.monthlySalary.toFixed(0)}`;
+            document.getElementById('invoice-date').textContent = new Date().toLocaleDateString();
+
+            salaryInvoiceModal.classList.remove('hidden');
+        };
+
+        // --- CORE APPLICATION LOGIC ---
+        const selectTable = (tableId) => {
+            selectedTableId = tableId;
+            renderTables();
+            renderOrder();
+            
+            // Update discount field in modal with the table's current discount
+            if (tables[selectedTableId]) {
+                 document.getElementById('discount-percentage').value = tables[selectedTableId].discountPercentage || 0;
+            }
+        };
+
+        const addItemToOrder = (menuItem) => {
+            if (!selectedTableId) {
+                showModal("Please select a table first.");
+                return;
+            }
+
+            const currentTable = tables[selectedTableId];
+            if (!currentTable) return;
+
+            const existingItem = currentTable.order.find(item => item.name === menuItem.name);
+
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                currentTable.order.push({
+                    name: menuItem.name,
+                    price: menuItem.price,
+                    quantity: 1
+                });
+            }
+            currentTable.isPaid = false;
+            updateTableInDb(selectedTableId, {
+                order: currentTable.order,
+                isPaid: currentTable.isPaid
+            });
+            renderOrder();
+        };
+
+        const changeItemQuantity = (itemName, action) => {
+            if (!selectedTableId || !tables[selectedTableId]) {
+                console.error("No table selected.");
+                return;
+            }
+
+            const currentTable = tables[selectedTableId];
+            const itemIndex = currentTable.order.findIndex(item => item.name === itemName);
+
+            if (itemIndex > -1) {
+                if (action === 'increment') {
+                    currentTable.order[itemIndex].quantity++;
+                } else if (action === 'decrement') {
+                    currentTable.order[itemIndex].quantity--;
+                    if (currentTable.order[itemIndex].quantity <= 0) {
+                        currentTable.order.splice(itemIndex, 1);
+                    }
+                }
+                updateTableInDb(selectedTableId, { order: currentTable.order });
+            }
+        };
+
+        
+        const openPaymentModal = () => {
+            if (!selectedTableId || !tables[selectedTableId] || tables[selectedTableId].order.length === 0) {
+                showModal("Please select a table with an active order.");
+                return;
+            }
+            const {
+                total
+            } = calculateTotals();
+
+            document.getElementById('modal-total-due').textContent = `৳${total.toFixed(2)}`;
+            document.getElementById('amount-received').value = '';
+            document.getElementById('change-due').textContent = `৳0.00`;
+            document.getElementById('customer-name').value = '';
+            document.getElementById('amount-received').removeAttribute('readonly');
+            paymentModal.classList.remove('hidden');
+        };
+
+        const finalizePayment = async () => {
+            const customerName = document.getElementById('customer-name').value.trim();
+            const {
+                subtotal,
+                discount,
+                tax,
+                total
+            } = calculateTotals();
+            const amountReceived = parseFloat(document.getElementById('amount-received').value);
+            const changeDue = amountReceived - total;
+            const paymentMethod = document.querySelector('input[name="payment-method"]:checked').value;
+
+            if (isNaN(amountReceived) || amountReceived < total) {
+                showModal("Amount received must be greater than or equal to the total.");
+                return;
+            }
+
+            if (!selectedTableId || !tables[selectedTableId]) return;
+
+            const currentTable = tables[selectedTableId];
+            const receiptData = {
+                order: currentTable.order,
+                subtotal: subtotal,
+                discount: discount,
+                tax: tax,
+                total: total,
+                amountPaid: amountReceived,
+                change: changeDue,
+                paymentMethod: paymentMethod
+            };
+
+            // Before clearing, save the payment record to the database
+            await createPaymentInDb({
+                timestamp: Date.now(),
+                total: total,
+                tableName: currentTable.name,
+                customerName: customerName || 'Anonymous', // Use a default if no name is entered
+                order: currentTable.order,
+                discount: discount,
+                paymentMethod: paymentMethod
+            });
+
+            showReceiptModal(receiptData);
+
+            updateTableInDb(selectedTableId, {
+                order: [], // Clear order
+                isPaid: true,
+                discountPercentage: 0
+            });
+            
+            paymentModal.classList.add('hidden');
+            selectedTableId = null; // Deselect table
+        };
+
+        const showReceiptModal = (data) => {
+            const receiptModal = document.getElementById('receipt-modal');
+            const receiptInfo = document.getElementById('receipt-info');
+            const receiptItems = document.getElementById('receipt-items');
+            const receiptSubtotal = document.getElementById('receipt-subtotal');
+            const receiptDiscount = document.getElementById('receipt-discount');
+            const receiptTax = document.getElementById('receipt-tax');
+            const receiptTotal = document.getElementById('receipt-total');
+            const receiptPaid = document.getElementById('receipt-paid');
+            const receiptChange = document.getElementById('receipt-change');
+            const receiptPaymentMethod = document.getElementById('receipt-payment-method');
+
+            // Clear previous items
+            receiptItems.innerHTML = '';
+
+            // Set header info
+            const now = new Date();
+            receiptInfo.innerHTML = `
+                <p>Date: ${now.toLocaleDateString()}</p>
+                <p>Time: ${now.toLocaleTimeString()}</p>
+                <p>Table: ${tables[selectedTableId] ? tables[selectedTableId].name : 'N/A'}</p>
+            `;
+
+            // Populate items
+            data.order.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between';
+                li.innerHTML = `<span>${item.name} x${item.quantity}</span><span>৳${(item.price * item.quantity).toFixed(2)}</span>`;
+                receiptItems.appendChild(li);
+            });
+
+            // Set totals and payment info
+            receiptSubtotal.textContent = `৳${data.subtotal.toFixed(2)}`;
+            receiptDiscount.textContent = `৳${data.discount.toFixed(2)}`;
+            receiptTax.textContent = `৳${data.tax.toFixed(2)}`;
+            receiptTotal.textContent = `৳${data.total.toFixed(2)}`;
+            receiptPaid.textContent = `৳${data.amountPaid.toFixed(2)}`;
+            receiptChange.textContent = `৳${data.change.toFixed(2)}`;
+            receiptPaymentMethod.textContent = data.paymentMethod;
+
+            receiptModal.classList.remove('hidden');
+        };
+
+        const downloadReceiptPdf = () => {
+            const receiptContent = document.getElementById('receipt-content');
+            html2canvas(receiptContent, {
+                scale: 2
+            }).then(canvas => {
+                const {
+                    jsPDF
+                } = window.jspdf;
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgWidth = 190;
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 10;
+
+                // Add a margin to the sides
+                const marginX = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
+
+                pdf.addImage(imgData, 'PNG', marginX, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', marginX, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+
+                pdf.save("restaurant-receipt.pdf");
+            });
+        };
+
+        const addNewTable = async () => {
+            const tableCount = Object.keys(tables).length + 1;
+            const newTableData = {
+                name: `Table ${tableCount}`,
+                order: [],
+                isPaid: false,
+                discountPercentage: 0
+            };
+            await createTableInDb(newTableData);
+        };
+
+        // --- EXPORT FUNCTIONS ---
+        const exportAllData = async (format) => {
+            if (!userId || !branchId) {
+                showModal("Authentication or branch not selected. Please select a branch first.");
+                return;
+            }
+
+            const tablesColRef = collection(db, getBranchPath('tables'));
+            const paymentsColRef = collection(db, getBranchPath('payments'));
+            const employeesColRef = collection(db, getBranchPath('employees'));
+            const expensesColRef = collection(db, getBranchPath('expenses'));
+
+            const [tablesSnapshot, paymentsSnapshot, employeesSnapshot, expensesSnapshot] = await Promise.all([
+                getDocs(tablesColRef),
+                getDocs(paymentsColRef),
+                getDocs(employeesColRef),
+                getDocs(expensesColRef)
+            ]);
+
+            const tableData = tablesSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            const paymentData = paymentsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            const employeeData = employeesSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+             const expenseData = expensesSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+
+            if (format === 'excel') {
+                exportToExcel(tableData, paymentData, employeeData, expenseData);
+            } else if (format === 'pdf') {
+                exportToPdf(tableData, paymentData, employeeData, expenseData);
+            }
+        };
+        
+        const exportToExcel = (tables, payments, employees, expenses) => {
+            const tableSheetData = tables.map(t => ({
+                'Table Name': t.name,
+                'Status': t.isPaid ? 'Paid' : (t.order.length > 0 ? 'Open' : 'Empty'),
+                'Order Details': JSON.stringify(t.order),
+                'Discount %': t.discountPercentage
+            }));
+
+            const paymentSheetData = payments.map(p => ({
+                'Transaction ID': p.id,
+                'Customer Name': p.customerName,
+                'Table Name': p.tableName,
+                'Total Revenue (৳)': p.total,
+                'Payment Method': p.paymentMethod,
+                'Timestamp': new Date(p.timestamp).toLocaleString()
+            }));
+
+            const employeeSheetData = employees.map(e => ({
+                'Employee Name': e.name,
+                'Role': e.role,
+                'Monthly Salary (৳)': e.monthlySalary,
+                'Total Hours': e.totalHours,
+                'Current Status': e.isWorking ? 'Working' : 'Off-Duty',
+                'Last Paid': e.lastPaidDate ? new Date(e.lastPaidDate).toLocaleDateString() : 'N/A'
+            }));
+
+            const expenseSheetData = expenses.map(e => ({
+                'Expense ID': e.id,
+                'Amount (৳)': e.amount,
+                'Description': e.description,
+                'Category': e.category,
+                'Date': new Date(e.timestamp).toLocaleDateString()
+            }));
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(tableSheetData), "Tables");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paymentSheetData), "Payments");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(employeeSheetData), "Employees");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseSheetData), "Expenses");
+
+            XLSX.writeFile(wb, "Restaurant_Data.xlsx");
+            showModal("Data successfully exported to Excel!");
+        };
+
+        const exportToPdf = (tables, payments, employees, expenses) => {
+            const pdfExportContent = document.getElementById('pdf-export-content');
+            pdfExportContent.classList.remove('hidden');
+
+            document.getElementById('pdf-export-date').textContent = new Date().toLocaleString();
+
+            const renderTableData = (tableId, data) => {
+                const tbody = document.getElementById(tableId);
+                tbody.innerHTML = '';
+                data.forEach(item => {
+                    const tr = document.createElement('tr');
+                    let content;
+                    if (tableId === 'pdf-tables') {
+                        const totalItems = item.order.reduce((sum, i) => sum + i.quantity, 0);
+                        const status = item.isPaid ? 'Paid' : (totalItems > 0 ? 'Open' : 'Empty');
+                        content = `
+                            <td class="py-2 px-4 border-b">${item.name}</td>
+                            <td class="py-2 px-4 border-b">${status}</td>
+                            <td class="py-2 px-4 border-b">${totalItems}</td>
+                            <td class="py-2 px-4 border-b">${item.discountPercentage}%</td>
+                        `;
+                    } else if (tableId === 'pdf-payments') {
+                        content = `
+                            <td class="py-2 px-4 border-b">${item.customerName || 'N/A'}</td>
+                            <td class="py-2 px-4 border-b">${item.tableName}</td>
+                            <td class="py-2 px-4 border-b">৳${item.total.toFixed(2)}</td>
+                            <td class="py-2 px-4 border-b">${new Date(item.timestamp).toLocaleString()}</td>
+                        `;
+                    } else if (tableId === 'pdf-employees') {
+                         const status = item.isWorking ? 'Working' : 'Off-Duty';
+                         const lastPaid = item.lastPaidDate ? new Date(item.lastPaidDate).toLocaleDateString() : 'N/A';
+                         const totalHours = (item.totalHours || 0).toFixed(1);
+                        content = `
+                            <td class="py-2 px-4 border-b">${item.name}</td>
+                            <td class="py-2 px-4 border-b">${item.role}</td>
+                            <td class="py-2 px-4 border-b">৳${item.monthlySalary.toFixed(0)}</td>
+                            <td class="py-2 px-4 border-b">${totalHours}h</td>
+                        `;
+                    } else if (tableId === 'pdf-expenses') {
+                        content = `
+                            <td class="py-2 px-4 border-b">${item.description}</td>
+                            <td class="py-2 px-4 border-b">${item.category}</td>
+                            <td class="py-2 px-4 border-b">৳${item.amount.toFixed(2)}</td>
+                            <td class="py-2 px-4 border-b">${new Date(item.timestamp).toLocaleString()}</td>
+                        `;
+                    }
+                    tr.innerHTML = content;
+                    tbody.appendChild(tr);
+                });
+            };
+
+            const tablesTable = document.getElementById('pdf-tables').parentNode.parentNode;
+            const paymentsTable = document.getElementById('pdf-payments').parentNode.parentNode;
+            const employeesTable = document.getElementById('pdf-employees').parentNode.parentNode;
+            const expensesTable = document.getElementById('pdf-expenses').parentNode.parentNode;
+
+            renderTableData('pdf-tables', tables);
+            renderTableData('pdf-payments', payments);
+            renderTableData('pdf-employees', employees);
+            renderTableData('pdf-expenses', expenses);
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'pt', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            let yOffset = 20;
+
+            const addContentToPdf = (element, title) => {
+                return new Promise(resolve => {
+                    html2canvas(element, { scale: 2 }).then(canvas => {
+                        const imgData = canvas.toDataURL('image/png');
+                        const imgWidth = pageWidth - 40;
+                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                        if (yOffset + imgHeight > pdf.internal.pageSize.getHeight() - 40) {
+                            pdf.addPage();
+                            yOffset = 20;
+                        }
+
+                        pdf.text(title, 20, yOffset);
+                        yOffset += 10;
+                        pdf.addImage(imgData, 'PNG', 20, yOffset, imgWidth, imgHeight);
+                        yOffset += imgHeight + 20;
+                        resolve();
+                    });
+                });
+            };
+
+            const exportContent = async () => {
+                await addContentToPdf(tablesTable, "Current Tables");
+                await addContentToPdf(paymentsTable, "Payment History");
+                await addContentToPdf(employeesTable, "Employee List");
+                await addContentToPdf(expensesTable, "Expense History");
+
+                pdf.save("Restaurant_Data_Report.pdf");
+                pdfExportContent.classList.add('hidden');
+                showModal("Data successfully exported to PDF!");
+            };
+
+            exportContent();
+        };
+
+        // --- WEATHER LOGIC ---
+        const fetchWeather = async (city, country) => {
+            const url = `${WEATHER_API_URL}&q=${city},${country}&appid=${WEATHER_API_KEY}`;
+            const weatherDisplay = document.getElementById('weather-display');
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Weather data not found for ${city}`);
+                }
+                const data = await response.json();
+                const icon = data.weather[0].icon;
+                const temp = Math.round(data.main.temp);
+                const description = data.weather[0].description;
+                
+                weatherDisplay.innerHTML = `
+                    <img src="${WEATHER_ICON_URL}${icon}.png" alt="${description}" class="w-12 h-12">
+                    <div class="flex flex-col">
+                        <span class="font-bold text-lg">${temp}°C</span>
+                        <span class="text-xs capitalize">${description} in ${city}</span>
+                    </div>
+                    <button id="refresh-weather-btn" class="ml-2 p-1 rounded-full bg-gray-200 hover:bg-gray-300 transition-colors">
+                        <i class="ph-bold ph-arrow-clockwise text-lg text-gray-600"></i>
+                    </button>
+                `;
+                document.getElementById('refresh-weather-btn').addEventListener('click', () => fetchWeather(city, country));
+            } catch (error) {
+                console.error("Could not fetch weather:", error);
+                weatherDisplay.innerHTML = `<span class="text-red-500">Weather unavailable</span>`;
+            }
+        };
+
+        // --- MODAL LOGIC (for alerts) ---
+        const paymentModal = document.getElementById('payment-modal');
+        const receiptModal = document.getElementById('receipt-modal');
+        const bonusModal = document.getElementById('bonus-modal');
+        const salaryInvoiceModal = document.getElementById('salary-invoice-modal');
+
+        const showModal = (message) => {
+            const existingModal = document.querySelector('#modal-message');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'modal-message';
+            modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50 z-50';
+            modal.innerHTML = `
+                <div class="bg-white p-8 rounded-3xl shadow-xl max-w-sm w-full text-center">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">Notification</h3>
+                    <p class="text-gray-600 mb-4">${message}</p>
+                    <button id="close-modal-btn" class="w-full py-3 px-4 rounded-xl text-white font-bold text-lg shadow-lg bg-blue-500 hover:bg-blue-600 transition-colors">
+                        Close
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            document.getElementById('close-modal-btn').addEventListener('click', () => {
+                modal.remove();
+            });
+        };
+
+
+        // --- VIEW TOGGLE LOGIC ---
+        const managerView = document.getElementById('manager-view');
+        const dashboardView = document.getElementById('dashboard-view');
+        const historyView = document.getElementById('history-view');
+        const menuEditorView = document.getElementById('menu-editor-view');
+        const staffView = document.getElementById('staff-view');
+        const attendanceView = document.getElementById('attendance-view');
+        const expensesView = document.getElementById('expenses-view');
+
+        const managerBtn = document.getElementById('manager-btn');
+        const dashboardBtn = document.getElementById('dashboard-btn');
+        const historyBtn = document.getElementById('history-btn');
+        const moreOptionsBtn = document.getElementById('more-options-btn');
+        const moreOptionsDropdown = document.getElementById('more-options-dropdown');
+        const editMenuBtn = document.getElementById('edit-menu-btn');
+        const staffBtn = document.getElementById('staff-btn');
+        const expensesBtn = document.getElementById('expenses-btn');
+        const exportPdfBtn = document.getElementById('export-pdf-btn');
+        const exportExcelBtn = document.getElementById('export-excel-btn');
+
+
+        const toggleView = (viewName) => {
+            managerView.classList.add('hidden');
+            managerView.classList.remove('flex');
+            dashboardView.classList.add('hidden');
+            dashboardView.classList.remove('flex');
+            historyView.classList.add('hidden');
+            historyView.classList.remove('flex');
+            menuEditorView.classList.add('hidden');
+            menuEditorView.classList.remove('flex');
+            staffView.classList.add('hidden');
+            staffView.classList.remove('flex');
+            attendanceView.classList.add('hidden');
+            attendanceView.classList.remove('flex');
+            expensesView.classList.add('hidden');
+            expensesView.classList.remove('flex');
+
+            if (viewName === 'manager') {
+                managerView.classList.remove('hidden');
+                managerView.classList.add('flex');
+            } else if (viewName === 'dashboard') {
+                dashboardView.classList.remove('hidden');
+                dashboardView.classList.add('flex');
+                renderDashboard();
+            } else if (viewName === 'history') {
+                historyView.classList.remove('hidden');
+                historyView.classList.add('flex');
+                renderPaymentHistory();
+            } else if (viewName === 'edit-menu') {
+                menuEditorView.classList.remove('hidden');
+                menuEditorView.classList.add('flex');
+                renderMenuEditor();
+            } else if (viewName === 'staff') {
+                staffView.classList.remove('hidden');
+                staffView.classList.add('flex');
+                renderEmployeeList();
+            } else if (viewName === 'attendance') {
+                attendanceView.classList.remove('hidden');
+                attendanceView.classList.add('flex');
+            } else if (viewName === 'expenses') {
+                expensesView.classList.remove('hidden');
+                expensesView.classList.add('flex');
+                renderExpenseList();
+            }
+        };
+
+        managerBtn.addEventListener('click', () => toggleView('manager'));
+        dashboardBtn.addEventListener('click', () => toggleView('dashboard'));
+        historyBtn.addEventListener('click', () => toggleView('history'));
+        editMenuBtn.addEventListener('click', () => {
+             toggleView('edit-menu');
+             moreOptionsDropdown.classList.add('hidden');
+        });
+        staffBtn.addEventListener('click', () => toggleView('staff'));
+        expensesBtn.addEventListener('click', () => {
+             toggleView('expenses');
+             moreOptionsDropdown.classList.add('hidden');
+        });
+
+        document.getElementById('save-menu-btn').addEventListener('click', saveMenuChanges);
+        document.getElementById('cancel-menu-btn').addEventListener('click', () => toggleView('manager'));
+        document.getElementById('back-to-staff-btn').addEventListener('click', () => toggleView('staff'));
+
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('pay-button').addEventListener('click', openPaymentModal);
+        document.getElementById('add-table-btn').addEventListener('click', addNewTable);
+        
+        // Listeners for payment modal
+        document.getElementById('amount-received').addEventListener('input', (e) => {
+            const totalDue = parseFloat(document.getElementById('modal-total-due').textContent.replace('৳', ''));
+            const amountReceived = parseFloat(e.target.value);
+            const changeDue = isNaN(amountReceived) ? 0 : amountReceived - totalDue;
+            document.getElementById('change-due').textContent = `৳${Math.max(0, changeDue).toFixed(2)}`;
+        });
+
+        document.getElementById('discount-percentage').addEventListener('input', (e) => {
+            const currentTable = tables[selectedTableId];
+            if (!currentTable) return;
+            currentTable.discountPercentage = parseFloat(e.target.value) || 0;
+            updateTableInDb(selectedTableId, {
+                discountPercentage: currentTable.discountPercentage
+            });
+            const {
+                total
+            } = calculateTotals();
+            document.getElementById('modal-total-due').textContent = `৳${total.toFixed(2)}`;
+            
+            const amountReceivedInput = document.getElementById('amount-received');
+            const amountReceived = parseFloat(amountReceivedInput.value);
+            const changeDue = isNaN(amountReceived) ? 0 : amountReceived - total;
+            document.getElementById('change-due').textContent = `৳${Math.max(0, changeDue).toFixed(2)}`;
+        });
+        
+        document.querySelectorAll('input[name="payment-method"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const amountReceivedInput = document.getElementById('amount-received');
+                const totalDue = parseFloat(document.getElementById('modal-total-due').textContent.replace('৳', ''));
+                if (e.target.value !== 'Cash') {
+                    amountReceivedInput.value = totalDue.toFixed(2);
+                    amountReceivedInput.setAttribute('readonly', true);
+                    document.getElementById('change-due').textContent = `৳0.00`;
+                } else {
+                    amountReceivedInput.value = '';
+                    amountReceivedInput.removeAttribute('readonly');
+                    document.getElementById('change-due').textContent = `৳0.00`;
+                }
+            });
+        });
+
+        document.getElementById('finalize-payment-btn').addEventListener('click', finalizePayment);
+        document.getElementById('cancel-payment-btn').addEventListener('click', () => {
+            paymentModal.classList.add('hidden');
+        });
+        document.getElementById('close-receipt-btn').addEventListener('click', () => {
+            receiptModal.classList.add('hidden');
+        });
+        document.getElementById('download-receipt-pdf-btn').addEventListener('click', downloadReceiptPdf);
+
+        // Staff management event listeners
+        document.getElementById('add-employee-btn').addEventListener('click', () => {
+            const name = document.getElementById('employee-name').value.trim();
+            const role = document.getElementById('employee-role').value.trim();
+            const salary = parseFloat(document.getElementById('employee-salary').value);
+            if (name && role && !isNaN(salary) && salary >= 0) {
+                addEmployeeToDb({ name, role, monthlySalary: salary, totalBonuses: 0, isWorking: false, totalHours: 0, clockInTime: null, currentAttendanceId: null, lastPaidDate: null });
+                document.getElementById('employee-name').value = '';
+                document.getElementById('employee-role').value = '';
+                document.getElementById('employee-salary').value = '';
+            } else {
+                showModal('Please enter a name, role, and a valid monthly salary for the new employee.');
+            }
+        });
+        
+        document.getElementById('finalize-bonus-btn').addEventListener('click', finalizeBonus);
+        document.getElementById('cancel-bonus-btn').addEventListener('click', () => {
+            bonusModal.classList.add('hidden');
+        });
+        document.getElementById('close-invoice-btn').addEventListener('click', () => {
+            salaryInvoiceModal.classList.add('hidden');
+        });
+        
+        // Expenses event listeners
+        document.getElementById('add-expense-btn').addEventListener('click', () => {
+            const amount = parseFloat(document.getElementById('expense-amount').value);
+            const description = document.getElementById('expense-description').value.trim();
+            const category = document.getElementById('expense-category').value;
+            if (!isNaN(amount) && amount > 0 && description && category) {
+                createExpenseInDb({ amount, description, category, timestamp: Date.now() });
+                document.getElementById('expense-amount').value = '';
+                document.getElementById('expense-description').value = '';
+                document.getElementById('expense-category').value = '';
+            } else {
+                showModal('Please enter a valid amount, description, and category.');
+            }
+        });
+
+        // More options dropdown listeners
+        const moreOptionsDropdown = document.getElementById('more-options-dropdown');
+        document.getElementById('more-options-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            moreOptionsDropdown.classList.toggle('hidden');
+        });
+        document.getElementById('export-pdf-btn').addEventListener('click', () => {
+            exportAllData('pdf');
+            moreOptionsDropdown.classList.add('hidden');
+        });
+        document.getElementById('export-excel-btn').addEventListener('click', () => {
+            exportAllData('excel');
+            moreOptionsDropdown.classList.add('hidden');
+        });
+        window.addEventListener('click', (e) => {
+            if (!document.getElementById('more-options-btn').contains(e.target) && !moreOptionsDropdown.contains(e.target)) {
+                moreOptionsDropdown.classList.add('hidden');
+            }
+        });
+
+
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            renderMenu();
+            fetchWeather("Dhaka", "BD");
+            if(branchId) {
+                document.getElementById('branch-modal').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                document.getElementById('main-app').classList.add('flex');
+                setupFirestoreListeners();
+                getOrCreateTables();
+            } else {
+                showBranchModal();
+            }
+        };
+    </script>
+</body>
+
+</html>
